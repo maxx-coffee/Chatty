@@ -6,63 +6,89 @@ var express = require('express')
 var bcrypt = require('bcrypt');
 var salt = bcrypt.genSaltSync(10);  
 
-mongoose = require('mongoose');
+var mongoose    = require("mongoose");
+var Schema      = mongoose.Schema;
+var ObjectId    = Schema.ObjectId;
+
+
+var io = require('socket.io'),
+    express = require('express'),
+    MemoryStore = express.session.MemoryStore,
+    app = express.createServer(),
+    sessionStore = new MemoryStore();
+
+var redis = require("redis"),
+client = redis.createClient();
+
+
+var parseCookie = require('connect').utils.parseCookie;
+// configure Express
+app.configure(function() {
+  app.set('views', __dirname + '/views');
+  app.set('view engine', 'ejs');
+  app.use(express.logger());
+  app.use(express.cookieParser());
+  app.use(express.bodyParser());
+  app.use(express.methodOverride());
+  app.set('controllers path', __dirname + '/controllers/');
+  app.use(express.session({store: sessionStore
+        , secret: 'secret'
+        , key: 'express.sid'}));
+
+  app.use(passport.initialize());
+  app.use(passport.session());
+  app.use(app.router);
+  app.use(express.static(__dirname + '/../../public'));
+ 
+});
 
 mongoose.connect('mongodb://localhost/my_database');
 
-var Schema = mongoose.Schema
-  , ObjectId = Schema.ObjectId;
+mongoose.model("User", require("./models/UserModel").User);
+// passport authentication 
 
 
-var Users = new Schema({
-    id    : ObjectId
-  , username     : String
-  , password      : String
-  , email       : String
+passport = require('passport');
+LocalStrategy = require('passport-local').Strategy;
 
-});
-
-
-
-/*
-var instance = new User();
-instance.username = "Josh";
-instance.password = "$2a$10$MRUOM54rYkFxIjDLYvK9Be9.v9pYz38vcI92N2EMYFTLxA6CH1UwO";
-instance.email = "josh@epiclabs.com";
-instance.save();
-*/
-var users = [
-    { id: 1, username: 'bob', password: '$2a$10$MRUOM54rYkFxIjDLYvK9Be9.v9pYz38vcI92N2EMYFTLxA6CH1UwO', email: 'bob@example.com' }
-];
+var mongoose    = require("mongoose");
+var Schema      = mongoose.Schema;
+var ObjectId    = Schema.ObjectId;
+var bcrypt = require('bcrypt');
+var salt = bcrypt.genSaltSync(10); 
 
 function findById(id, fn) {
-var User = mongoose.model('User', Users);
+var User      = mongoose.model("User");
 User.find({$where : "this._id == '"+id+"' "}, function(error, data){
   var user = data[0];
   if (user) {
     fn(null, user);
-    //return users[idx];
   } else {
     fn(new Error('User ' + id + ' does not exist'));
   }
 });
   
 }
-/*
-function findByUsername(username, fn) {
-  for (var i = 0, len = users.length; i < len; i++) {
-    var user = users[i];
-    if (user.username === username) {
-      return fn(null, user);
-    }
+
+function checkroom(id, room, fn) {
+var User      = mongoose.model("User");
+User.find({$where : "this._id == '"+id+"'", $where : "this.rooms =='"+room+"'"}, function(error, data){
+  var user = data[0];
+  if (user) {
+    fn(null, user);
+  } else {
+    fn(new Error('User ' + id + ' does not exist'));
   }
-  return fn(null, null);
+});
+  
 }
-*/
+
 function findByUsername(username, fn) {
-var User = mongoose.model('User', Users);
+var User      = mongoose.model("User");
+
 User.find({$where : "this.username == '"+username+"' "}, function(error, data){
     var user = data[0];
+    console.log(data);
     if (user.username === username) {
       return fn(null, user);
     }else{
@@ -71,10 +97,6 @@ User.find({$where : "this.username == '"+username+"' "}, function(error, data){
     
 });
 }
-
-
-
-
 
 
 // Passport session setup.
@@ -90,20 +112,11 @@ passport.deserializeUser(function(id, done) {
 });
 
 
-// Use the LocalStrategy within Passport.
-//   Strategies in passport require a `verify` function, which accept
-//   credentials (in this case, a username and password), and invoke a callback
-//   with a user object.  In the real world, this would query a database;
-//   however, in this example we are using a baked-in set of users.
 passport.use(new LocalStrategy(
   function(username, password, done) {
     // asynchronous verification, for effect...
     process.nextTick(function () {
       
-      // Find the user by username.  If there is no user with the given
-      // username, or the password is not correct, set the user to `false` to
-      // indicate failure and set a flash message.  Otherwise, return the
-      // authenticated `user`.
       findByUsername(username, function(err, user) {
         
         var check_password = bcrypt.compareSync(password, user.password);
@@ -119,42 +132,46 @@ passport.use(new LocalStrategy(
 ));
 
 
-var io = require('socket.io'),
-    express = require('express'),
-    MemoryStore = express.session.MemoryStore,
-    app = express.createServer(),
-    sessionStore = new MemoryStore();
 
 
-// configure Express
-app.configure(function() {
-  app.set('views', __dirname + '/views');
-  app.set('view engine', 'ejs');
-  app.use(express.logger());
-  app.use(express.cookieParser());
-  app.use(express.bodyParser());
-  app.use(express.methodOverride());
-  app.use(express.session({store: sessionStore
-        , secret: 'secret'
-        , key: 'express.sid'}));
-
-  // Initialize Passport!  Also use passport.session() middleware, to support
-  // persistent login sessions (recommended).
-  app.use(passport.initialize());
-  app.use(passport.session());
-  app.use(app.router);
-  app.use(express.static(__dirname + '/../../public'));
- 
-});
-
-
-
-
+require('./routes')(app);
 app.listen(3000);
 var sio = io.listen(app);
 
 
-var parseCookie = require('connect').utils.parseCookie;
+
+
+/*
+
+mongoose = require('mongoose');
+
+mongoose.connect('mongodb://localhost/my_database');
+
+var Schema = mongoose.Schema
+  , ObjectId = Schema.ObjectId;
+
+
+var Users = new Schema({
+    id    : ObjectId
+  , username     : String
+  , password      : String
+  , email       : String
+  , rooms       : String
+
+});
+
+
+
+var User = mongoose.model('Users', Users);
+var instance = new User();
+instance.username = "Josh";
+instance.password = "$2a$10$MRUOM54rYkFxIjDLYvK9Be9.v9pYz38vcI92N2EMYFTLxA6CH1UwO";
+instance.email = "josh@epiclabs.com";
+instance.rooms = "test";
+instance.save();
+*/
+
+
  
 sio.set('authorization', function (data, accept) {
     if (data.headers.cookie) {
@@ -177,21 +194,37 @@ sio.set('authorization', function (data, accept) {
 });
 
 sio.sockets.on('connection', function (socket) {
+  var room = socket.namespace.manager.rooms;
+
     socket.on('message', function (message) {
        var userid = socket.handshake.session.passport.user;
        findById(userid, function (err, user) {
           console.log(user);
        });
     });
+
+    socket.on('send_chat', function(message){
+      var userid = socket.handshake.session.passport.user;
+       findById(userid, function (err, user) {
+          if(user){
+            console.log(user.password);
+            sio.sockets.in("test").emit('update_chat', user.username, message);
+          }
+       });
+    });
+
+    socket.on('join_room', function(room){
+      var userid = socket.handshake.session.passport.user;
+      checkroom(userid,room, function (err, user) {
+          if(room){
+            socket.join(room);
+          }
+       });
+    })
 });
 
-app.get('/', function(req, res){
-  res.render('account', { user: req.user });
-});
 
-app.get('/account', ensureAuthenticated, function(req, res){
-  res.render('account/account', { user: req.user });
-});
+
 
 app.get('/login', function(req, res){
   res.render('account/login', { user: req.user, message: req.flash('error') });
@@ -210,11 +243,7 @@ app.get('/logout', function(req, res){
   res.redirect('account');
 });
 
-// Simple route middleware to ensure user is authenticated.
-//   Use this route middleware on any resource that needs to be protected.  If
-//   the request is authenticated (typically via a persistent login session),
-//   the request will proceed.  Otherwise, the user will be redirected to the
-//   login page.
+
 function ensureAuthenticated(req, res, next) {
   if (req.isAuthenticated()) { return next(); }
   res.redirect('/login')

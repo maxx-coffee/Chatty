@@ -1,1 +1,0 @@
-module.exports = mongoose.model('PhoneNumber', PhoneNumberSchema);
