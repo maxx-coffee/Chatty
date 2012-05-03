@@ -7,7 +7,8 @@
 		<script type="text/javascript">
 			var socket = io.connect('http://127.0.0.1');
 			$(function(){
-				room = "test";
+
+				room = "<%= room %>";
 				socket.emit('join_room', room);
 				socket.on('update_chat', function(user,message){
 					$("#chat").append(user+" "+message+"<br>");
@@ -15,7 +16,7 @@
 
 				$("#submit").click(function(){
 					var message = $("#message").val();
-					socket.emit('send_chat', message);
+					socket.emit('send_chat', message, room);
 				});
 			})
 		</script>	

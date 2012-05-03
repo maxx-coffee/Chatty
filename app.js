@@ -72,7 +72,7 @@ User.find({$where : "this._id == '"+id+"' "}, function(error, data){
 
 function checkroom(id, room, fn) {
 var User      = mongoose.model("User");
-User.find({$where : "this._id == '"+id+"'", $where : "this.rooms =='"+room+"'"}, function(error, data){
+User.find({_id:id, rooms:room}, function(error, data){
   var user = data[0];
   if (user) {
     fn(null, user);
@@ -131,12 +131,12 @@ passport.use(new LocalStrategy(
   }
 ));
 
-
+sio = io.listen(app);
 
 
 require('./routes')(app);
 app.listen(3000);
-var sio = io.listen(app);
+
 
 
 
@@ -194,7 +194,6 @@ sio.set('authorization', function (data, accept) {
 });
 
 sio.sockets.on('connection', function (socket) {
-  var room = socket.namespace.manager.rooms;
 
     socket.on('message', function (message) {
        var userid = socket.handshake.session.passport.user;
@@ -203,12 +202,11 @@ sio.sockets.on('connection', function (socket) {
        });
     });
 
-    socket.on('send_chat', function(message){
+    socket.on('send_chat', function(message, room){
       var userid = socket.handshake.session.passport.user;
-       findById(userid, function (err, user) {
+       checkroom(userid,room, function (err, user) {
           if(user){
-            console.log(user.password);
-            sio.sockets.in("test").emit('update_chat', user.username, message);
+            sio.sockets.in(room).emit('update_chat', user.username, message);
           }
        });
     });
