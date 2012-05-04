@@ -4,14 +4,11 @@ var mongoose = require('mongoose'),
 
 var User = new Schema({
     id    : ObjectId
-  , username     : String
-  , password      : String
+  , username    : String
+  , password    : String
   , email       : String
+  , rooms       : String
 
 });
-
-
-
-
 
 exports.User = User;

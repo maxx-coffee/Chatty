@@ -9,10 +9,12 @@ function ensureAuthenticated(req, res, next) {
 
 module.exports = function(app) {
   app.all('/', user.index);
-  app.all('/test', ensureAuthenticated,user.account);
+  app.all('/user/test', ensureAuthenticated,user.account);
   app.all('/login', user.login);
   app.all('/logout', user.logout);
   //chat routes
   app.all('/chat',  chat.index);
-  app.all('/chat/:id',  chat.index, sio);
+  app.post('/chat/new',  chat.new);
+  app.get('/chat/new', chat.new);
+   app.all('/chat/:team/:id',  chat.index);
 }

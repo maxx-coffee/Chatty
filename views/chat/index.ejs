@@ -1,6 +1,31 @@
-<%= room %>
-<div id="chat">
+<script type="text/javascript">
+			var socket = io.connect('http://127.0.0.1');
+			$(function(){
+				<% if (typeof room != 'undefined'){ %>
+				room = "<%= room %>";
 
-</div>
+				socket.emit('join_room', room);
+				socket.emit('send_chat', "has joined the room, what up", room);
+				<% } %>
+				socket.on('update_chat', function(user,message){
+					$("#chat tbody").append("<tr><td class='name'>"+user+"</td><td> "+message+"</td></tr>");
+				});
+
+				$("#submit").click(function(){
+					var message = $("#message").val();
+					socket.emit('send_chat', message, room);
+				});
+			})
+		</script>	
+<% if (typeof error != 'undefined'){ %>
+<%= error %>
+<%}%>
+<%if (typeof role != 'undefined' && role == "owner"){ %>
+yo you the owner
+<%}%>
+<table id="chat" class="table table-bordered table-striped">
+	<tbody>
+	</tbody>
+</table>
 <input id="message" type="text">
 <input type="submit" id="submit">

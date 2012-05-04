@@ -17,9 +17,13 @@ var io = require('socket.io'),
     app = express.createServer(),
     sessionStore = new MemoryStore();
 
-var redis = require("redis"),
-client = redis.createClient();
 
+
+
+
+    client.on("error", function (err) {
+    console.log("Error " + err);
+});
 
 var parseCookie = require('connect').utils.parseCookie;
 // configure Express
@@ -38,13 +42,14 @@ app.configure(function() {
   app.use(passport.initialize());
   app.use(passport.session());
   app.use(app.router);
-  app.use(express.static(__dirname + '/../../public'));
+   app.use(express.static(__dirname + '/public'));
  
 });
 
 mongoose.connect('mongodb://localhost/my_database');
 
 mongoose.model("User", require("./models/UserModel").User);
+mongoose.model("Chat", require("./models/ChatModel").Chat);
 // passport authentication 
 
 
@@ -98,6 +103,19 @@ User.find({$where : "this.username == '"+username+"' "}, function(error, data){
 });
 }
 
+
+function find_room(room, fn) {
+var Chat      = mongoose.model("Chat");
+Chat.find({name:room}, function(error, data){
+  var room = data[0];
+  if (room) {
+    fn(null, room);
+  } else {
+    fn(new Error('User ' + id + ' does not exist'));
+  }
+});
+  
+}
 
 // Passport session setup.
 
@@ -195,26 +213,22 @@ sio.set('authorization', function (data, accept) {
 
 sio.sockets.on('connection', function (socket) {
 
-    socket.on('message', function (message) {
-       var userid = socket.handshake.session.passport.user;
-       findById(userid, function (err, user) {
-          console.log(user);
-       });
-    });
+  
 
     socket.on('send_chat', function(message, room){
       var userid = socket.handshake.session.passport.user;
        checkroom(userid,room, function (err, user) {
           if(user){
             sio.sockets.in(room).emit('update_chat', user.username, message);
+
           }
        });
     });
 
     socket.on('join_room', function(room){
       var userid = socket.handshake.session.passport.user;
-      checkroom(userid,room, function (err, user) {
-          if(room){
+      checkroom(userid, room, function (err, user) {
+          if(user){
             socket.join(room);
           }
        });

@@ -4,22 +4,9 @@
 		<title>Passport-Local Example</title>
 		<script src="/socket.io/socket.io.js"></script>
 		<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.js"></script>
-		<script type="text/javascript">
-			var socket = io.connect('http://127.0.0.1');
-			$(function(){
-
-				room = "<%= room %>";
-				socket.emit('join_room', room);
-				socket.on('update_chat', function(user,message){
-					$("#chat").append(user+" "+message+"<br>");
-				});
-
-				$("#submit").click(function(){
-					var message = $("#message").val();
-					socket.emit('send_chat', message, room);
-				});
-			})
-		</script>	
+		<link rel="stylesheet" href="/stylesheets/bootstrap-responsive.min.css">
+		<link rel="stylesheet" href="/stylesheets/bootstrap.css">
+		<link rel="stylesheet" href="/stylesheets/style.css">
 	</head>
 	<body>
 		<% if (!user) { %>
